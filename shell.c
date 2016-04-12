@@ -4,6 +4,8 @@
  * Last Modified: 1/18/2014
  */
 
+ // TODO - Implement array size checking (check if libraries exist)
+
 #include    <stdlib.h>
 #include    <stdio.h>
 #include    <unistd.h>
@@ -28,43 +30,55 @@ int main()
     char** inputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
 
     char** outputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
-    bool wait = TRUE;
-    bool pipe = FALSE;
+    bool wait = true;
+    bool pipe = false;
     char** execCommand = (char**) malloc( MAX_NUM_WORDS * sizeof(char*) );
     int counter = 0;
     int inputCounter = 0;
     int outputCounter = 0;
-    bool endCommand = FALSE;
+    bool endCommand = false;
+    for (int i = 0; i < sizeof(words); i++){
+      printf("%s\n", words[i]);
+    }
+    //printf("%i\n", sizeof(words));
+    //fflush(stdout);
     while (!endCommand && counter<sizeof(words)-1){
-      if (!strcmp(words[i],'&') || !strcmp(words[i],'|') || !strcmp(words[i],'>') || !strcmp(words[i],'<')){
-        execCommand[counter] = words[i];
+      if (!strcmp(words[counter],"&") || !strcmp(words[counter],"|") || !strcmp(words[counter],">") || !strcmp(words[counter],"<")){
+        execCommand[counter] = words[counter];
         counter++;
       }
       else{
-        endCommand = TRUE;
+        endCommand = true;
       }
     }
-
+    printf("1.2");
+    fflush(stdout);
     while (counter<sizeof(words)-1){
-      if (strcmp(words[counter], '&')){
-        wait = FALSE;
+      printf("%d",counter);
+      fflush(stdout);
+      if (strcmp(words[counter], "&")){
+        wait = false;
         counter ++;
       }
-      else if (strcmp(words[counter], '|')){
-        pipe = TRUE;
+      else if (strcmp(words[counter], "|")){
+        pipe = true;
         counter ++;
       }
-      else if (strcmp(words[counter], '>')){
+      else if (strcmp(words[counter], ">")){
         strcpy(outputFiles[outputCounter++], words[counter++]);
         counter++;
       }
-      else if (strcmp(words[counter], '<')){
+      else if (strcmp(words[counter], "<")){
         strcpy(inputFiles[inputCounter++], words[counter++]);
         counter++;
       }
+      else{
+        counter++;
+      }
+      
     }
-
-
+    printf("2");
+    fflush(stdout);
     long i;
 
     // fork splits process into 2 identical processes that both continue
