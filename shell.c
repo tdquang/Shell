@@ -14,8 +14,8 @@
 #include    <sys/wait.h>
 #include    <stdbool.h>
 
-
 char** readLineOfWords();
+int getArraySize();
 
 int main()
 {
@@ -37,12 +37,14 @@ int main()
     int inputCounter = 0;
     int outputCounter = 0;
     bool endCommand = false;
-    for (int i = 0; i < sizeof(words); i++){
+    int inputLength = getArraySize(words);
+
+    for (int i = 0; i < inputLength; i++){
       printf("%s\n", words[i]);
     }
     //printf("%i\n", sizeof(words));
     //fflush(stdout);
-    while (!endCommand && counter<sizeof(words)-1){
+    while (!endCommand && counter<inputLength) {
       if (!strcmp(words[counter],"&") || !strcmp(words[counter],"|") || !strcmp(words[counter],">") || !strcmp(words[counter],"<")){
         execCommand[counter] = words[counter];
         counter++;
@@ -51,9 +53,9 @@ int main()
         endCommand = true;
       }
     }
-    printf("1.2");
-    fflush(stdout);
-    while (counter<sizeof(words)-1){
+    // printf("1.2");
+    // fflush(stdout);
+    while (counter<inputLength){
       printf("%d",counter);
       fflush(stdout);
       if (strcmp(words[counter], "&")){
@@ -77,8 +79,8 @@ int main()
       }
       
     }
-    printf("2");
-    fflush(stdout);
+    // printf("2");
+    // fflush(stdout);
     long i;
 
     // fork splits process into 2 identical processes that both continue
@@ -140,4 +142,16 @@ char** readLineOfWords() {
   
   // return the list of words
   return words;
+}
+
+int getArraySize(char** array) {
+  int actualSize = 0;
+  int i = 0;
+  while(array[i] != NULL) {
+    i++;
+    actualSize++;
+  }
+  printf("Size is %d\n\n",actualSize);
+  fflush(stdout);
+  return actualSize;
 }
