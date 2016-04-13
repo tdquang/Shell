@@ -30,7 +30,10 @@ int main()
 
   // execute command in words[0] with arguments in array words
   // by convention first argument is command itself, last argument must be NULL
-  execvp(words[0], words);
+  char** newword = (char**) malloc( 3 * sizeof(char*) );
+  newword[0] = "ls";
+  newword[1] = "-a";
+  execvp(words[0], newword);
  
   // execvp replaces current process so should never get here!
   printf( "Will this get printed? No.\n" );

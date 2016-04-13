@@ -13,6 +13,7 @@
 #include    <sys/types.h>
 #include    <sys/wait.h>
 #include    <stdbool.h>
+#include <fcntl.h>
 
 char** readLineOfWords();
 int getArraySize();
@@ -28,7 +29,6 @@ int main()
     char** words = readLineOfWords();
 
     char** inputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
-
     char** outputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     bool wait = true;
     bool pipe = false;
@@ -39,39 +39,36 @@ int main()
     bool endCommand = false;
     int inputLength = getArraySize(words);
 
-    for (int i = 0; i < inputLength; i++){
-      printf("%s\n", words[i]);
-    }
     //printf("%i\n", sizeof(words));
     //fflush(stdout);
     while (!endCommand && counter<inputLength) {
-      if (!strcmp(words[counter],"&") || !strcmp(words[counter],"|") || !strcmp(words[counter],">") || !strcmp(words[counter],"<")){
-        execCommand[counter] = words[counter];
-        counter++;
+      if (strcmp(words[counter],"&") == 0 || strcmp(words[counter],"|") == 0|| strcmp(words[counter],">") == 0|| strcmp(words[counter],"<") == 0){
+        endCommand = true;
       }
       else{
-        endCommand = true;
+        execCommand[counter] = words[counter];
+        counter++;
       }
     }
     // printf("1.2");
     // fflush(stdout);
     while (counter<inputLength){
-      printf("%d",counter);
-      fflush(stdout);
-      if (strcmp(words[counter], "&")){
+      if (strcmp(words[counter], "&") == 0){
         wait = false;
         counter ++;
       }
-      else if (strcmp(words[counter], "|")){
+      else if (strcmp(words[counter], "|") == 0){
         pipe = true;
         counter ++;
       }
-      else if (strcmp(words[counter], ">")){
-        strcpy(outputFiles[outputCounter++], words[counter++]);
+      else if (strcmp(words[counter], ">") == 0){
+        outputFiles[outputCounter] = words[++counter];
+        outputCounter++;
         counter++;
       }
-      else if (strcmp(words[counter], "<")){
-        strcpy(inputFiles[inputCounter++], words[counter++]);
+      else if (strcmp(words[counter], "<") == 0){
+        inputFiles[inputCounter] = words[++counter];
+        inputCounter++;
         counter++;
       }
       else{
@@ -79,8 +76,6 @@ int main()
       }
       
     }
-    // printf("2");
-    // fflush(stdout);
     long i;
 
     // fork splits process into 2 identical processes that both continue
@@ -90,8 +85,21 @@ int main()
 
     // if 0 is returned, execute code for child process
     if( pid == 0 ){
-      execvp(words[0], words);
-      fflush( stdout );
+      if (getArraySize(outputFiles) > 0){
+        int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
+        dup2(newfd, 1);
+        //fclose(newfd);
+      }
+      if (getArraySize(inputFiles) > 0){
+        int fileInput = open(inputFiles[getArraySize(inputFiles) - 1], O_CREAT|O_RDONLY, 6666);
+        dup2(fileInput, 0);
+        execvp(execCommand[0], execCommand);
+      }
+      else{
+        //printf("%s\n", execCommand);
+        execvp(execCommand[0], execCommand);
+      }
+      //fflush( stdout );
     }
     if (wait){
       waitpid(pid,NULL,0);
@@ -151,7 +159,5 @@ int getArraySize(char** array) {
     i++;
     actualSize++;
   }
-  printf("Size is %d\n\n",actualSize);
-  fflush(stdout);
   return actualSize;
 }
