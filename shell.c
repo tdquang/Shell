@@ -21,89 +21,106 @@ int getArraySize();
 int main()
 {
   size_t MAX_WORD_LENGTH = 100;
+  size_t MAX_NUM_COMMANDS = 40;
   size_t MAX_NUM_WORDS = 51;
 
   while (1){
     printf("enter a shell command (e.g. ls): ");
     fflush(stdout);
     char** words = readLineOfWords();
-
+    int wordCounter = 0;
+    
     char** inputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     char** outputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     bool wait = true;
-    bool pipe = false;
-    char** execCommand = (char**) malloc( MAX_NUM_WORDS * sizeof(char*) );
-    int counter = 0;
+    char** execCommand = (char**) malloc( MAX_NUM_COMMANDS * MAX_NUM_WORDS * sizeof(char*) );
+    char** commands = malloc( sizeof(execCommand));
+    int commandCounter = 0;
     int inputCounter = 0;
     int outputCounter = 0;
     bool endCommand = false;
     int inputLength = getArraySize(words);
-
-    //printf("%i\n", sizeof(words));
-    //fflush(stdout);
-    while (!endCommand && counter<inputLength) {
-      if (strcmp(words[counter],"&") == 0 || strcmp(words[counter],"|") == 0|| strcmp(words[counter],">") == 0|| strcmp(words[counter],"<") == 0){
-        endCommand = true;
+    printf("Here");
+    fflush(stdout);
+    while (wordCounter<inputLength) {
+      if (strcmp(words[wordCounter],"|") == 0){
+          commandCounter++;
+          wordCounter++;
       }
       else{
-        execCommand[counter] = words[counter];
-        counter++;
+        printf("Here11");
+        fflush(stdout);
+        execCommand[commandCounter][wordCounter] = words[wordCounter];
+        printf("Here112312");
+        fflush(stdout);
+        wordCounter++;
       }
     }
-    // printf("1.2");
-    // fflush(stdout);
-    while (counter<inputLength){
-      if (strcmp(words[counter], "&") == 0){
-        wait = false;
-        counter ++;
-      }
-      else if (strcmp(words[counter], "|") == 0){
-        pipe = true;
-        counter ++;
-      }
-      else if (strcmp(words[counter], ">") == 0){
-        outputFiles[outputCounter] = words[++counter];
-        outputCounter++;
-        counter++;
-      }
-      else if (strcmp(words[counter], "<") == 0){
-        inputFiles[inputCounter] = words[++counter];
-        inputCounter++;
-        counter++;
-      }
-      else{
-        counter++;
-      }
-      
-    }
-    long i;
+    int currentCommand = 0;
+    wordCounter = 0;
+    printf("Here1");
+    fflush(stdout);
+    while (execCommand[currentCommand] != NULL){
+        while (wordCounter<inputLength){
+          if (strcmp(words[wordCounter], "&") == 0){
+            wait = false;
+            wordCounter ++;
+          }
+          else if (strcmp(words[wordCounter], ">") == 0){
+            outputFiles[outputCounter] = words[++wordCounter];
+            outputCounter++;
+            wordCounter++;
+          }
+          else if (strcmp(words[wordCounter], "<") == 0){
+            inputFiles[inputCounter] = words[++wordCounter];
+            inputCounter++;
+            wordCounter++;
+          }
+          else{
+            wordCounter++;
+          }
+        }
+        long i;
+        printf("Here2");
+        fflush(stdout);
+        // fork splits process into 2 identical processes that both continue
+        // running from point where fork() returns. Only difference is return
+        // value - 0 to the child process, pid of child to the parent process  
+        int pid = fork();
 
-    // fork splits process into 2 identical processes that both continue
-    // running from point where fork() returns. Only difference is return
-    // value - 0 to the child process, pid of child to the parent process  
-    int pid = fork();
-
-    // if 0 is returned, execute code for child process
-    if( pid == 0 ){
-      if (getArraySize(outputFiles) > 0){
-        int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
-        dup2(newfd, 1);
-        //fclose(newfd);
+        // if 0 is returned, execute code for child process
+        if( pid == 0){
+          if (getArraySize(inputFiles) > 0){
+            int fileInput = open(inputFiles[getArraySize(inputFiles) - 1], O_CREAT|O_RDONLY, 6666);
+            dup2(fileInput, 0);
+          }
+            
+          if (getArraySize(outputFiles) > 0){
+            int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
+            dup2(newfd, 1);
+          }
+            
+          if (currentCommand < commandCounter){
+            int pfd[2];
+            if (pipe(pfd) == 0){
+                int pipepid = fork();
+                if (pipepid == 0){
+                    close(pfd[1]);
+                    dup2(pfd[0], 0);
+                }
+                else{
+                    close(pfd[0]);
+                    dup2(pfd[1], 1);
+                }
+            }
+          }
+          execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
+        }
+        if (wait){
+          waitpid(pid,NULL,0);
+        }
       }
-      if (getArraySize(inputFiles) > 0){
-        int fileInput = open(inputFiles[getArraySize(inputFiles) - 1], O_CREAT|O_RDONLY, 6666);
-        dup2(fileInput, 0);
-        execvp(execCommand[0], execCommand);
-      }
-      else{
-        //printf("%s\n", execCommand);
-        execvp(execCommand[0], execCommand);
-      }
-      //fflush( stdout );
-    }
-    if (wait){
-      waitpid(pid,NULL,0);
-    }
+      currentCommand++;
   }
 return 0;
 }
