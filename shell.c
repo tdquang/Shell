@@ -1,10 +1,7 @@
-/* Simple example of using execvp with helpful function to read a line from
- * stdin and parse it into an array of individual tokens
- * Author: Sherri Goings
- * Last Modified: 1/18/2014
+/* Simple Shell Program
+ * Author: Quang Tran, Cody Bolhman
+ * Last Modified: 4/15/2016
  */
-
- // TODO - Implement array size checking (check if libraries exist)
 
 #include    <stdlib.h>
 #include    <stdio.h>
@@ -28,22 +25,24 @@ int main()
     printf("enter a shell command (e.g. ls): ");
     fflush(stdout);
     char** words = readLineOfWords();
+    // counter to keep track of the current word in the command line
     int wordCounter = 0;
 
     char** inputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     char** outputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     bool wait = true;
-    char*** execCommand = (char***) malloc(MAX_NUM_COMMANDS * MAX_NUM_WORDS * sizeof(char*) );
+    char*** execCommand = (char***) malloc(MAX_NUM_COMMANDS * MAX_NUM_WORDS * sizeof(char*));
 
-    // char** commands = malloc( sizeof(execCommand));
+    // counter to count total number of commands separated by pipe and given by user
     int totalCommands = 0;
+    // counter to keep track of the word in current command
     int currentInCommand = 0;
+    // counter to keep track of num of input and output files given by user.
+    // If there is more than 1, it should still be a valid input, but the terminal will only consider the last one
     int inputCounter = 0;
     int outputCounter = 0;
-    bool endCommand = false;
     int inputLength = getArraySize(words);
-    // printf("%d",inputLength);
-    // fflush(stdout);
+
     bool doAdd = true;
     execCommand[totalCommands] = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     while (wordCounter<inputLength) {
@@ -78,58 +77,51 @@ int main()
 
 
     int currentCommand = 0;
-    // printf("Here1");
-    // fflush(stdout);
-
-        // printf("HERE!");
-        // fflush(stdout);
     long i;
-        // printf("Here2");
-        // fflush(stdout);
-        // fork splits process into 2 identical processes that both continue
-        // running from point where fork() returns. Only difference is return
-        // value - 0 to the child process, pid of child to the parent process
+    // fork splits process into 2 identical processes that both continue
+    // running from point where fork() returns. Only difference is return
+    // value - 0 to the child process, pid of child to the parent process
     int pid = fork();
-        // if 0 is returned, execute code for child process
+
+    // if 0 is returned, execute code for child process
     if( pid == 0){
+      // take in input file. When the user types in several inputs, the only valid one is the last one
       if (getArraySize(inputFiles) > 0){
         int fileInput = open(inputFiles[getArraySize(inputFiles) - 1], O_CREAT|O_RDONLY, 6666);
         dup2(fileInput, 0);
       }
-
-      if (getArraySize(outputFiles) > 0){
-        //printf("\n\n%s\n\n",outputFiles[0]);
-        //fflush(stdout);
-        int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
-        dup2(newfd, 1);
-      }
-
+      free(inputFiles);
+      // while there are still commands to run. Doesn't go here if there is only 1 command in user-given line
       while (currentCommand < totalCommands){
-        // printf("\nsomething\n");
-        // fflush(stdout);
+        // create a pipe
         int pfd[2];
         if (pipe(pfd) == 0){
           int pipepid = fork();
           if (pipepid == 0){
             close(pfd[0]);
             dup2(pfd[1], 1);
-            printf("\nStdin %d\n", pfd[1]);
-            fflush(stdout);
-            execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
             waitpid(pipepid,NULL,0);
+            execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
           }
           else{
             close(pfd[1]);
             dup2(pfd[0], 0);
-            printf("\nStdout %d\n", pfd[0]);
-            fflush(stdout);
           }
         }
         currentCommand++;
       }
-      execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
 
+      // if there is output file, direct the result there
+      if (getArraySize(outputFiles) > 0){
+        int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
+        dup2(newfd, 1);
+      }
+      free(outputFiles);
+      //execute last command
+      execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
     }
+
+    // shell process
     else{
       if (wait){
         waitpid(pid,NULL,0);
@@ -183,6 +175,9 @@ char** readLineOfWords() {
   return words;
 }
 
+/*
+ * takes in a pointer to an array and returns it's size (or num of elements from the beginning)
+ */
 int getArraySize(char** array) {
   int actualSize = 0;
   int i = 0;
