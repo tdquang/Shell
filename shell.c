@@ -1,4 +1,4 @@
-/* Simple example of using execvp with helpful function to read a line from 
+/* Simple example of using execvp with helpful function to read a line from
  * stdin and parse it into an array of individual tokens
  * Author: Sherri Goings
  * Last Modified: 1/18/2014
@@ -29,71 +29,66 @@ int main()
     fflush(stdout);
     char** words = readLineOfWords();
     int wordCounter = 0;
-    
+
     char** inputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     char** outputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     bool wait = true;
     char*** execCommand = (char***) malloc(MAX_NUM_COMMANDS * MAX_NUM_WORDS * sizeof(char*) );
-    
+
     // char** commands = malloc( sizeof(execCommand));
-    int commandCounter = 0;
+    int totalCommands = 0;
+    int currentInCommand = 0;
     int inputCounter = 0;
     int outputCounter = 0;
     bool endCommand = false;
     int inputLength = getArraySize(words);
-    printf("%d",inputLength);
-    fflush(stdout);
-    execCommand[commandCounter] = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
+    // printf("%d",inputLength);
+    // fflush(stdout);
+    bool doAdd = true;
+    execCommand[totalCommands] = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     while (wordCounter<inputLength) {
-      if (strcmp(words[wordCounter],"|") == 0){
-          commandCounter++;
+        if (strcmp(words[wordCounter],"|") != 0 && strcmp(words[wordCounter],"<") != 0 && strcmp(words[wordCounter],">") != 0 && strcmp(words[wordCounter],"&") != 0){
+          execCommand[totalCommands][currentInCommand] = words[wordCounter];
+          currentInCommand++;
           wordCounter++;
-          execCommand[commandCounter] = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
-          // printf("PIPED");
-          // fflush(stdout);
+        }
+        else if (strcmp(words[wordCounter],"|") == 0){
+          totalCommands++;
+          execCommand[totalCommands] = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
+          currentInCommand = 0;
+          wordCounter++;
+        }
+        else if (strcmp(words[wordCounter],"<") == 0){
+          wordCounter++;
+          inputFiles[inputCounter] = words[wordCounter];
+          inputCounter++;
+          wordCounter++;
+        }
+        else if (strcmp(words[wordCounter],">") == 0){
+          wordCounter++;
+          outputFiles[outputCounter] = words[wordCounter];
+          outputCounter++;
+          wordCounter++;
+        }
+        else if (strcmp(words[wordCounter],"&") == 0){
+          wordCounter++;
+          wait = false;
+        }
       }
-      else{
-        char** current = execCommand[commandCounter];
-        // printf("%s",current);
-        // fflush(stdout);
-        execCommand[commandCounter][wordCounter] = words[wordCounter];
-        // printf("Here112312");
-        // fflush(stdout);
-        wordCounter++;
-      }
-    }
+
+
     int currentCommand = 0;
-    wordCounter = 0;
     // printf("Here1");
     // fflush(stdout);
-    while (execCommand[currentCommand] != NULL){
-        printf("HERE!");
-        fflush(stdout);
-        while (wordCounter<inputLength){
-          if (strcmp(words[wordCounter], "&") == 0){
-            wait = false;
-            wordCounter ++;
-          }
-          else if (strcmp(words[wordCounter], ">") == 0){
-            outputFiles[outputCounter] = words[++wordCounter];
-            outputCounter++;
-            wordCounter++;
-          }
-          else if (strcmp(words[wordCounter], "<") == 0){
-            inputFiles[inputCounter] = words[++wordCounter];
-            inputCounter++;
-            wordCounter++;
-          }
-          else{
-            wordCounter++;
-          }
-        }
+    while (currentCommand <= totalCommands){
+        // printf("HERE!");
+        // fflush(stdout);
         long i;
-        printf("Here2");
-        fflush(stdout);
+        // printf("Here2");
+        // fflush(stdout);
         // fork splits process into 2 identical processes that both continue
         // running from point where fork() returns. Only difference is return
-        // value - 0 to the child process, pid of child to the parent process  
+        // value - 0 to the child process, pid of child to the parent process
         int pid = fork();
 
         // if 0 is returned, execute code for child process
@@ -102,45 +97,57 @@ int main()
             int fileInput = open(inputFiles[getArraySize(inputFiles) - 1], O_CREAT|O_RDONLY, 6666);
             dup2(fileInput, 0);
           }
-            
+
           if (getArraySize(outputFiles) > 0){
+            //printf("\n\n%s\n\n",outputFiles[0]);
+            //fflush(stdout);
             int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
             dup2(newfd, 1);
           }
-            
-          if (currentCommand < commandCounter){
+
+          if (currentCommand < totalCommands){
+            // printf("\nsomething\n");
+            // fflush(stdout);
             int pfd[2];
             if (pipe(pfd) == 0){
                 int pipepid = fork();
                 if (pipepid == 0){
                     close(pfd[1]);
                     dup2(pfd[0], 0);
+                    printf("\nStdout %d\n", pfd[0]);
+                    fflush(stdout);
+                    waitpid(pipepid,NULL,0);
                 }
                 else{
                     close(pfd[0]);
                     dup2(pfd[1], 1);
+                    printf("\nStdin %d\n", pfd[1]);
+                    fflush(stdout);
+                    execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
                 }
             }
           }
-          execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
+          else{
+            execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
+          }
         }
         if (wait){
           waitpid(pid,NULL,0);
         }
         currentCommand++;
       }
-      
+
   }
 return 0;
 }
 
-/* 
- * reads a single line from terminal and parses it into an array of tokens/words by 
- * splitting the line on spaces.  Adds NULL as final token 
+/*
+ * reads a single line from terminal and parses it into an array of tokens/words by
+ * splitting the line on spaces.  Adds NULL as final token
  */
 char** readLineOfWords() {
 
-  // A line may be at most 100 characters long, which means longest word is 100 chars, 
+  // A line may be at most 100 characters long, which means longest word is 100 chars,
   // and max possible tokens is 51 as must be space between each
   size_t MAX_WORD_LENGTH = 100;
   size_t MAX_NUM_WORDS = 51;
@@ -157,7 +164,7 @@ char** readLineOfWords() {
   char *buf;
   buf = (char*) malloc( MAX_WORD_LENGTH+1 );
   bytes_read = getline(&buf, &MAX_WORD_LENGTH, stdin);
- 
+
   // take each word from line and add it to next spot in list of words
   i=0;
   char* word = (char*) malloc( MAX_WORD_LENGTH );
@@ -169,11 +176,11 @@ char** readLineOfWords() {
 
   // check if we quit because of going over allowed word limit
   if (i == MAX_NUM_WORDS) {
-    printf( "WARNING: line contains more than %d words!\n", (int)MAX_NUM_WORDS ); 
-  } 
+    printf( "WARNING: line contains more than %d words!\n", (int)MAX_NUM_WORDS );
+  }
   else
     words[i] = NULL;
-  
+
   // return the list of words
   return words;
 }

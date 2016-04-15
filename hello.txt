@@ -1,0 +1,25 @@
+CURRENT is -a.
+..
+.DS_Store
+._Project1-ShellC.pdf
+._dup2example.c
+._execexample.c
+._forktest.c
+._pipeexample.c
+._test.py
+.git
+.output.txt.swp
+Project1-ShellC.pdf
+README.md
+dup2example.c
+execexample
+execexample.c
+forktest.c
+hello.txt
+output.txt
+pipeexample.c
+shell
+shell.c
+test.out
+test.py
+text.txt
