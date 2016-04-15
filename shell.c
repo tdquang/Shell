@@ -80,63 +80,61 @@ int main()
     int currentCommand = 0;
     // printf("Here1");
     // fflush(stdout);
-    while (currentCommand <= totalCommands){
+
         // printf("HERE!");
         // fflush(stdout);
-        long i;
+    long i;
         // printf("Here2");
         // fflush(stdout);
         // fork splits process into 2 identical processes that both continue
         // running from point where fork() returns. Only difference is return
         // value - 0 to the child process, pid of child to the parent process
-        int pid = fork();
-
+    int pid = fork();
         // if 0 is returned, execute code for child process
-        if( pid == 0){
-          if (getArraySize(inputFiles) > 0){
-            int fileInput = open(inputFiles[getArraySize(inputFiles) - 1], O_CREAT|O_RDONLY, 6666);
-            dup2(fileInput, 0);
-          }
+    if( pid == 0){
+      if (getArraySize(inputFiles) > 0){
+        int fileInput = open(inputFiles[getArraySize(inputFiles) - 1], O_CREAT|O_RDONLY, 6666);
+        dup2(fileInput, 0);
+      }
 
-          if (getArraySize(outputFiles) > 0){
-            //printf("\n\n%s\n\n",outputFiles[0]);
-            //fflush(stdout);
-            int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
-            dup2(newfd, 1);
-          }
+      if (getArraySize(outputFiles) > 0){
+        //printf("\n\n%s\n\n",outputFiles[0]);
+        //fflush(stdout);
+        int newfd = open(outputFiles[getArraySize(outputFiles) - 1], O_CREAT|O_WRONLY, 0644);
+        dup2(newfd, 1);
+      }
 
-          if (currentCommand < totalCommands){
-            // printf("\nsomething\n");
-            // fflush(stdout);
-            int pfd[2];
-            if (pipe(pfd) == 0){
-                int pipepid = fork();
-                if (pipepid == 0){
-                    close(pfd[1]);
-                    dup2(pfd[0], 0);
-                    printf("\nStdout %d\n", pfd[0]);
-                    fflush(stdout);
-                    waitpid(pipepid,NULL,0);
-                }
-                else{
-                    close(pfd[0]);
-                    dup2(pfd[1], 1);
-                    printf("\nStdin %d\n", pfd[1]);
-                    fflush(stdout);
-                    execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
-                }
-            }
+      while (currentCommand < totalCommands){
+        // printf("\nsomething\n");
+        // fflush(stdout);
+        int pfd[2];
+        if (pipe(pfd) == 0){
+          int pipepid = fork();
+          if (pipepid == 0){
+            close(pfd[0]);
+            dup2(pfd[1], 1);
+            printf("\nStdin %d\n", pfd[1]);
+            fflush(stdout);
+            execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
+            waitpid(pipepid,NULL,0);
           }
           else{
-            execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
+            close(pfd[1]);
+            dup2(pfd[0], 0);
+            printf("\nStdout %d\n", pfd[0]);
+            fflush(stdout);
           }
-        }
-        if (wait){
-          waitpid(pid,NULL,0);
         }
         currentCommand++;
       }
+      execvp(execCommand[currentCommand][0], execCommand[currentCommand]);
 
+    }
+    else{
+      if (wait){
+        waitpid(pid,NULL,0);
+      }
+    }
   }
 return 0;
 }
