@@ -13,7 +13,7 @@
 #include    <sys/types.h>
 #include    <sys/wait.h>
 #include    <stdbool.h>
-#include <fcntl.h>
+#include    <fcntl.h>
 
 char** readLineOfWords();
 int getArraySize();
@@ -33,34 +33,42 @@ int main()
     char** inputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     char** outputFiles = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     bool wait = true;
-    char** execCommand = (char**) malloc( MAX_NUM_COMMANDS * MAX_NUM_WORDS * sizeof(char*) );
-    char** commands = malloc( sizeof(execCommand));
+    char*** execCommand = (char***) malloc(MAX_NUM_COMMANDS * MAX_NUM_WORDS * sizeof(char*) );
+    
+    // char** commands = malloc( sizeof(execCommand));
     int commandCounter = 0;
     int inputCounter = 0;
     int outputCounter = 0;
     bool endCommand = false;
     int inputLength = getArraySize(words);
-    printf("Here");
+    printf("%d",inputLength);
     fflush(stdout);
+    execCommand[commandCounter] = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
     while (wordCounter<inputLength) {
       if (strcmp(words[wordCounter],"|") == 0){
           commandCounter++;
           wordCounter++;
+          execCommand[commandCounter] = (char**) malloc( MAX_NUM_WORDS * sizeof(char*));
+          // printf("PIPED");
+          // fflush(stdout);
       }
       else{
-        printf("Here11");
-        fflush(stdout);
+        char** current = execCommand[commandCounter];
+        // printf("%s",current);
+        // fflush(stdout);
         execCommand[commandCounter][wordCounter] = words[wordCounter];
-        printf("Here112312");
-        fflush(stdout);
+        // printf("Here112312");
+        // fflush(stdout);
         wordCounter++;
       }
     }
     int currentCommand = 0;
     wordCounter = 0;
-    printf("Here1");
-    fflush(stdout);
+    // printf("Here1");
+    // fflush(stdout);
     while (execCommand[currentCommand] != NULL){
+        printf("HERE!");
+        fflush(stdout);
         while (wordCounter<inputLength){
           if (strcmp(words[wordCounter], "&") == 0){
             wait = false;
@@ -119,8 +127,9 @@ int main()
         if (wait){
           waitpid(pid,NULL,0);
         }
+        currentCommand++;
       }
-      currentCommand++;
+      
   }
 return 0;
 }
